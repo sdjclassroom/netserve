@@ -327,12 +327,12 @@ bool download_file(const std::string &filename, const std::string &outpath, cons
 int main(int argc, char** argv) {
     if (argc < 2) {
         std::cout << "Usage:\n"
-                  << "  create_user <username> <password>\n"
+                  << "  create <username> <password>        # creates an account\n"
                   << "  login <username> <password>         # save credentials locally\n"
                   << "  logout                              # clear saved credentials\n"
-                  << "  whoami                              # show saved username\n"
+                  << "  user                                # show saved username\n"
                   << "  upload <filepath> [username password]\n"
-                  << "  list_files [username password]\n"
+                  << "  list [username password]\n"
                   << "  download <filename> <outpath> [username password]\n";
         return 1;
     }
@@ -340,7 +340,7 @@ int main(int argc, char** argv) {
     curl_global_init(CURL_GLOBAL_DEFAULT);
 
     std::string cmd = argv[1];
-    if (cmd == "create_user") {
+    if (cmd == "create") {
         if (argc != 4) { std::cerr << "create_user requires username and password\n"; return 1; }
         bool ok = create_user(argv[2], argv[3]);
         curl_global_cleanup();
@@ -354,7 +354,7 @@ int main(int argc, char** argv) {
         bool ok = clear_credentials();
         std::cout << (ok ? "Logged out\n" : "No credentials found or failed to delete\n");
         return ok ? 0 : 1;
-    } else if (cmd == "whoami") {
+    } else if (cmd == "user") {
         std::string user, pass;
         if (load_credentials(user, pass)) {
             std::cout << "Saved username: " << user << "\n";
@@ -380,7 +380,7 @@ int main(int argc, char** argv) {
         bool ok = upload_file(filepath, user, pass);
         curl_global_cleanup();
         return ok ? 0 : 1;
-    } else if (cmd == "list_files") {
+    } else if (cmd == "list") {
         std::string user, pass;
         if (argc == 2) {
             if (!load_credentials(user, pass)) { std::cerr << "No saved credentials; provide username and password\n"; return 1; }

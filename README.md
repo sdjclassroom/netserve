@@ -1,80 +1,80 @@
 # Network-Terminal
 
-A small file-upload/download project with a Python HTTP server and a C++ command-line client.
+Private file-sharing server + CLI client (think: a lightweight Google Drive CLI).  
+Designed for personal or small-team private use: upload large files in chunks, store per-file ownership, and download via a simple C++ command-line client or curl.
+
+## What it is for
+- Quickly share files privately between machines (LAN or over SSH/VPN).
+- Scriptable CLI workflows for automated uploads/downloads.
+- Keeps simple ownership metadata and enforces Basic HTTP auth for access.
 
 ## Components
+- server.py — Flask-based HTTP API (user creation, upload init, chunk upload, file list, download).
+- main.cpp — single-file C++ CLI client using libcurl (create user, upload/download, list files).
+- uploads/ — storage: incomplete/ (chunks), complete/ (assembled files), metadata.json, users.json.
+- Prebuilt binaries (if present): network-terminal, netserve, netserve2.
 
-- Server: Flask-based API implemented in [server.py](server.py). Key endpoints / helpers:
-  - [`server.create_user`](server.py) — POST /api/user/create
-  - [`server.init_upload`](server.py) — POST /api/upload/init
-  - [`server.upload_chunk`](server.py) — POST /api/upload/chunk
-  - [`server.list_files`](server.py) — GET /api/files
-  - [`server.download_file`](server.py) — GET /api/download/<filename>
-  - Auth helpers: [`server.require_auth`](server.py), [`server._parse_basic_auth`](server.py)
-- Client CLI: C++ single-file client implemented in [main.cpp](main.cpp). Main helpers:
-  - [`main.create_user`](main.cpp)
-  - [`main.init_upload`](main.cpp)
-  - [`main.upload_chunk`](main.cpp)
-  - [`main.upload_file`](main.cpp)
-  - [`main.list_files`](main.cpp)
-  - [`main.download_file`](main.cpp)
-  - Helpers: [`main.WriteCallback`](main.cpp), [`main.get_field_string`](main.cpp), credential helpers in [main.cpp](main.cpp)
-- Example/aux files and binaries:
-  - Local binaries: `netserve`, `netserve2`, `network-terminal`
-  - Stored uploads and metadata: [uploads/metadata.json](uploads/metadata.json), [uploads/users.json](uploads/users.json), completed files in [uploads/complete/network-terminal](uploads/complete/network-terminal)
+## Quick setup (Ubuntu 24.04 dev container)
+1. Install dependencies
+   - For server (Python + Flask):
+     sudo apt update
+     sudo apt install -y python3 python3-venv python3-pip
+     python3 -m venv .venv
+     source .venv/bin/activate
+     pip install flask
+   - For client (C++ with libcurl):
+     sudo apt install -y g++ libcurl4-openssl-dev build-essential
 
-## Features
-
-- Chunked uploads with server-side assembly. Server enforces a 90 MB chunk max (`CHUNK_SIZE` in [server.py](server.py)).
-- Per-file ownership and metadata stored in [uploads/metadata.json](uploads/metadata.json).
-- Basic HTTP Basic auth for all upload/download operations (see [`server.require_auth`](server.py)).
-- Client supports saving credentials locally in the user's home (see credential helpers in [main.cpp](main.cpp)).
-
-## Quickstart
-
-1. Start the server
+2. Start the server
    - From the workspace root:
-     - Python: python3 server.py
-     - The server serves API on http://0.0.0.0:5000
+     source .venv/bin/activate   # if using the venv
+     python3 server.py
+   - The server listens on http://0.0.0.0:5000 by default. To open in the host browser:
+     $BROWSER http://localhost:5000
 
-2. Use the C++ CLI (prebuilt `network-terminal` or build from [main.cpp](main.cpp)):
-   - Create a user:
-     - CLI: network-terminal create_user <username> <password>
-     - Or using the C++ client function: see [`main.create_user`](main.cpp)
-   - Upload a file (client will split into chunks automatically):
-     - network-terminal upload <filepath> [username password]
-   - List files:
-     - network-terminal list_files [username password]
-   - Download:
-     - network-terminal download <filename> <outpath> [username password]
+3. Build the CLI client (optional, prebuilt binary may exist)
+   g++ -std=c++17 main.cpp -o network-terminal -lcurl
 
-## Building the client
+## Basic usage
+- Create a user (server must be running):
+  ./network-terminal create_user <username> <password>
+  or
+  curl -X POST -d '{"username":"user","password":"pass"}' http://localhost:5000/api/user/create
 
-If you want to build the C++ client yourself:
+- Upload a file (client splits into chunks automatically):
+  ./network-terminal upload /path/to/file [username password]
 
-- Ensure libcurl and a C++ compiler are installed.
-- Example build:
-  - g++ -std=c++17 main.cpp -o network-terminal -lcurl
-- See [main.cpp](main.cpp) for the client implementation and the functions listed above.
+- List files:
+  ./network-terminal list_files [username password]
 
-## Storage layout
+- Download a file:
+  ./network-terminal download <filename> <outpath> [username password]
 
+Notes:
+- If username/password are omitted, the client may use saved credentials from your home directory (see credential helpers in main.cpp).
+- The server enforces a max chunk size (CHUNK_SIZE in server.py — defaults to ~90 MB).
+
+## Storage & data
 - uploads/
-  - incomplete/ — per-upload chunk folders
-  - complete/ — assembled files (owner-restricted downloads)
-  - metadata.json — upload metadata ([uploads/metadata.json](uploads/metadata.json))
-  - users.json — stored user hashes ([uploads/users.json](uploads/users.json))
+  - incomplete/ — temporary chunk folders per upload
+  - complete/ — assembled files available for download
+  - metadata.json — per-file metadata and ownership
+  - users.json — stored user hashes
+- Ensure the server process user can read/write the uploads/ directory.
 
-## Notes & troubleshooting
+## Security & limitations
+- Basic HTTP auth only. Not production-hardened (no TLS by default). Use behind a VPN, SSH tunnel, or add a reverse proxy with TLS for public use.
+- Authentication and user storage are intentionally simple (suitable for private/self-hosted use).
+- Chunk size and other policies are enforced server-side — see server.py for details.
 
-- The server enforces chunk size and checks for complete chunk sets before assembly. Review [`server.init_upload`](server.py) and [`server.upload_chunk`](server.py) for behavior details.
-- If using saved credentials, the client stores them in a file path determined by [`main.credentials_path`](main.cpp).
-- Prebuilt ELF binaries (`netserve`, `netserve2`) are present for convenience.
+## Troubleshooting
+- Permission errors: ensure uploads/ is writable by the server user.
+- Rebuild client if libcurl linking fails: confirm libcurl4-openssl-dev is installed.
+- To reset state (loss of users/metadata): stop server, back up or delete uploads/users.json and uploads/metadata.json, then restart.
 
 ## Contributing
+- Server logic: server.py
+- Client: main.cpp
+- Tests / fixes: open a PR or edit files in this workspace.
 
-- Modify the server logic in [server.py](server.py).
-- Update or extend the client in [main.cpp](main.cpp).
-- Keep metadata in [uploads/metadata.json](uploads/metadata.json) and user hashes in [uploads/users.json](uploads/users.json).
-
-License: MIT — see [LICENSE](LICENSE)
+License: MIT — see LICENSE

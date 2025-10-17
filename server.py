@@ -242,6 +242,55 @@ def upload_chunk():
 
     return jsonify(resp), 200
 
+
+# Share a file with another user (owner only)
+@app.route('/api/file/share', methods=['POST'])
+@require_auth
+def share_file():
+    data = request.get_json(force=True)
+    file_id = data.get("file_id")
+    share_with = data.get("share_with")
+    if not file_id or not share_with:
+        return jsonify({"error": "file_id and share_with are required"}), 400
+
+    users = load_users()
+    if share_with not in users:
+        return jsonify({"error": "target user not found"}), 404
+
+    meta = load_metadata()
+    if file_id not in meta:
+        return jsonify({"error": "invalid file_id"}), 404
+
+    if meta[file_id].get("owner") != g.current_user:
+        return jsonify({"error": "only owner can share the file"}), 403
+
+    shared = meta[file_id].setdefault("shared_with", [])
+    if share_with in shared:
+        return jsonify({"status": "already_shared", "file_id": file_id, "shared_with": shared}), 200
+
+    shared.append(share_with)
+    save_metadata(meta)
+    return jsonify({"status": "shared", "file_id": file_id, "shared_with": shared}), 200
+
+
+# List files visible to the caller: owned files + files shared with them
+@app.route('/api/files/shared', methods=['GET'])
+@require_auth
+def list_shared_files():
+    files = []
+    meta = load_metadata()
+    for fid, info in meta.items():
+        if info.get("assembled"):
+            final_name = info.get("final_filename", info.get("filename", f"{fid}.bin"))
+            path = os.path.join(COMPLETE_DIR, final_name)
+            if os.path.isfile(path):
+                owner = info.get("owner")
+                shared_with = info.get("shared_with", [])
+                if owner == g.current_user or g.current_user in shared_with:
+                    stat = os.stat(path)
+                    files.append({"file_id": fid, "filename": final_name, "size": stat.st_size, "owner": owner, "shared_with": shared_with})
+    return jsonify({"files": files})
+
 # List completed files (only show files owned by caller)
 @app.route('/api/files', methods=['GET'])
 @require_auth
@@ -273,7 +322,9 @@ def download_file(filename):
     if not found:
         return jsonify({"error": "file not found"}), 404
     fid, info = found
-    if info.get("owner") != g.current_user:
+    # allow owner or shared users
+    shared_with = info.get("shared_with", [])
+    if info.get("owner") != g.current_user and g.current_user not in shared_with:
         return jsonify({"error": "not authorized to download this file"}), 403
     return send_from_directory(COMPLETE_DIR, safe_name, as_attachment=True)
 
