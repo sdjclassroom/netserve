@@ -10,7 +10,7 @@ Designed for personal or small-team private use: upload large files in chunks, s
 
 ## Components
 - server.py — Flask-based HTTP API (user creation, upload init, chunk upload, file list, download).
-- main.cpp — single-file C++ CLI client using libcurl (create user, upload/download, list files).
+- netserve.cpp — single-file C++ CLI client using libcurl (create user, upload/download, list files).
 - uploads/ — storage: incomplete/ (chunks), complete/ (assembled files), metadata.json, users.json.
 - Prebuilt binaries (if present): network-terminal, netserve, netserve2.
 
