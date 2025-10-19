@@ -1,20 +1,20 @@
-# Network-Terminal
+# Netserve
 
 Private file-sharing server + CLI client (think: a lightweight Google Drive CLI).  
 Designed for personal or small-team private use: upload large files in chunks, store per-file ownership, and download via a simple C++ command-line client or curl.
+This is mainly designed to work over a cloudflare tunnel and to decentralize the global cloud storage.
 
 ## What it is for
-- Quickly share files privately between machines (LAN or over SSH/VPN).
+- Quickly share files privately between users or machines.
 - Scriptable CLI workflows for automated uploads/downloads.
 - Keeps simple ownership metadata and enforces Basic HTTP auth for access.
 
 ## Components
 - server.py — Flask-based HTTP API (user creation, upload init, chunk upload, file list, download).
 - netserve.cpp — single-file C++ CLI client using libcurl (create user, upload/download, list files).
-- uploads/ — storage: incomplete/ (chunks), complete/ (assembled files), metadata.json, users.json.
-- Prebuilt binaries (if present): network-terminal, netserve, netserve2.
+- Prebuilt binaries (if present): netserve clients.
 
-## Quick setup (Ubuntu 24.04 dev container)
+## Quick setup (Ubuntu/Linux)
 1. Install dependencies
    - For server (Python + Flask):
      sudo apt update
@@ -27,7 +27,6 @@ Designed for personal or small-team private use: upload large files in chunks, s
 
 2. Start the server
    - From the workspace root:
-     source .venv/bin/activate   # if using the venv
      python3 server.py
    - The server listens on http://0.0.0.0:5000 by default. To open in the host browser:
      $BROWSER http://localhost:5000
@@ -37,21 +36,25 @@ Designed for personal or small-team private use: upload large files in chunks, s
 
 ## Basic usage
 - Create a user (server must be running):
-  ./network-terminal create_user <username> <password>
+  ./netserve create <username> <password>
   or
   curl -X POST -d '{"username":"user","password":"pass"}' http://localhost:5000/api/user/create
 
+- Log into an account:
+   ./netserve login <username> <password>
+
 - Upload a file (client splits into chunks automatically):
-  ./network-terminal upload /path/to/file [username password]
+  ./netserve upload /path/to/file [username password]
 
 - List files:
-  ./network-terminal list_files [username password]
+  ./netserve list [username password]
 
 - Download a file:
-  ./network-terminal download <filename> <outpath> [username password]
+  ./netserve download <filename> [username password]
+  - This puts the file in your downloads directory by default.
 
 Notes:
-- If username/password are omitted, the client may use saved credentials from your home directory (see credential helpers in main.cpp).
+- After unning "netserve login <username> <password>", There is no need to log in again.
 - The server enforces a max chunk size (CHUNK_SIZE in server.py — defaults to ~90 MB).
 
 ## Storage & data
@@ -78,3 +81,5 @@ Notes:
 - Tests / fixes: open a PR or edit files in this workspace.
 
 License: MIT — see LICENSE
+
+Thank You for helping build a better, more decentralized web for the people!
