@@ -1,3 +1,4 @@
+# server.py  (full server file with delete endpoint added)
 from flask import Flask, jsonify, request, send_from_directory, g
 from werkzeug.utils import secure_filename
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -306,7 +307,7 @@ def list_files():
                 files.append({"file_id": fid, "filename": final_name, "size": stat.st_size})
     return jsonify({"files": files})
 
-# Download a completed file (only owner can download)
+# Download a completed file (owner or shared users)
 @app.route('/api/download/<path:filename>', methods=['GET'])
 @require_auth
 def download_file(filename):
@@ -327,6 +328,34 @@ def download_file(filename):
     if info.get("owner") != g.current_user and g.current_user not in shared_with:
         return jsonify({"error": "not authorized to download this file"}), 403
     return send_from_directory(COMPLETE_DIR, safe_name, as_attachment=True)
+
+# Delete a file by file_id (owner only)
+@app.route('/api/file/<file_id>', methods=['DELETE'])
+@require_auth
+def delete_file(file_id):
+    meta = load_metadata()
+    if file_id not in meta:
+        return jsonify({"error": "invalid file_id"}), 404
+    info = meta[file_id]
+    if info.get("owner") != g.current_user:
+        return jsonify({"error": "not authorized to delete this file"}), 403
+
+    final_name = info.get("final_filename", info.get("filename", f"{file_id}.bin"))
+    path = os.path.join(COMPLETE_DIR, final_name)
+    try:
+        if os.path.isfile(path):
+            os.remove(path)
+    except Exception as e:
+        return jsonify({"error": f"failed to remove file: {str(e)}"}), 500
+
+    # remove metadata entry
+    try:
+        del meta[file_id]
+        save_metadata(meta)
+    except Exception as e:
+        return jsonify({"error": f"failed to update metadata: {str(e)}"}), 500
+
+    return jsonify({"status": "deleted", "file_id": file_id}), 200
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
