@@ -598,16 +598,16 @@ bool download_file(const std::string &filename, const std::string &username, con
 int main(int argc, char** argv) {
     if (argc < 2) {
         std::cout << "Usage:\n"
-                  << "  server [url]                                # show or set server URL\n"
-                  << "  create <username> <password>               # creates an account on the server\n"
-                  << "  login <username> <password>                # save credentials locally\n"
-                  << "  logout                                     # clear saved credentials\n"
-                  << "  user                                       # show saved username\n"
-                  << "  upload <filepath> [username password]\n"
-                  << "  list [username password]\n"
-                  << "  share <file_id_or_filename> <user> [username password]\n"
-                  << "  delete <file_id_or_filename> [username password]\n"
-                  << "  download <filename> [username password]\n";
+                  << "  server [url]                               # show or set server URL           \n"
+                  << "  create <username> <password>               # creates an account on the server \n"
+                  << "  login <username> <password>                # save credentials locally         \n"
+                  << "  logout                                     # clear saved credentials          \n"
+                  << "  user                                       # show saved username              \n"
+                  << "  upload <filepath> [username password]      # uploads the specified file       \n"
+                  << "  list [username password]                                                      \n"
+                  << "  share <file_id_or_filename> <user> [username password]                        \n"
+                  << "  delete <file_id_or_filename> [username password]                              \n"
+                  << "  download <filename> [username password]                                       \n";
         return 1;
     }
 
