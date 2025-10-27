@@ -603,11 +603,11 @@ int main(int argc, char** argv) {
                   << "  login <username> <password>                # save credentials locally         \n"
                   << "  logout                                     # clear saved credentials          \n"
                   << "  user                                       # show saved username              \n"
-                  << "  upload <filepath> [username password]      # uploads the specified file       \n"
-                  << "  list [username password]                                                      \n"
-                  << "  share <file_id_or_filename> <user> [username password]                        \n"
-                  << "  delete <file_id_or_filename> [username password]                              \n"
-                  << "  download <filename> [username password]                                       \n";
+                  << "  upload <filepath>                          # uploads the specified file       \n"
+                  << "  list                                       # lists the files owned by user    \n"
+                  << "  share <file_id_or_filename> <user>         # shares ownership of the file     \n"
+                  << "  delete <file_id_or_filename>               # deletes the specified file       \n"
+                  << "  download <filename>                        # downloads the specified file     \n";
         return 1;
     }
 
